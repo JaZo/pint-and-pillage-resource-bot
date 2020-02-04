@@ -1,0 +1,13 @@
+{
+  "name": "pint-and-pillage-resource-bot",
+  "version": "1.0.0",
+  "description": "Pint and Pillage Resource Bot",
+  "main": "index.js",
+  "author": "Jasper Zonneveld <jasper@swis.nl>",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "node-schedule": "^1.3.2",
+    "yaml": "^1.7.2"
+  }
+}

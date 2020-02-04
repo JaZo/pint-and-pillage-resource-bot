@@ -1,0 +1,9 @@
+username: user
+password: secret
+
+resources:
+  - type: Beer # Beer, Hop, Stone or Wood.
+    from: Full # Sending village name.
+    to: Haugr # Receiving village name.
+    threshold: 15000 # Only send resources above this amount.
+    limit: -10000 # Stop sending when resources in receiving village are above this amount.
