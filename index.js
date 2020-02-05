@@ -60,7 +60,8 @@ schedule.scheduleJob('*/15 * * * *', () => {
             }
 
             // Calculate the amount to send
-            const amount = Math.floor((sendingVillage.villageResources.availableResources[resource.type] - resource.threshold) / 1000) * 1000;
+            const threshold = resource.threshold < 0 ? sendingVillage.resourceLimit + resource.threshold : resource.threshold;
+            const amount = Math.floor((sendingVillage.villageResources.availableResources[resource.type] - threshold) / 1000) * 1000;
 
             if (amount > 0) {
                 const market = sendingVillage.buildings.find(building => building.name === 'Market');
