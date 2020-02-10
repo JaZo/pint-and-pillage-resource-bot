@@ -52,7 +52,7 @@ schedule.scheduleJob('*/15 * * * *', () => {
 
             // Check limit
             const limit = resource.limit < 0 ? receivingVillage.resourceLimit + resource.limit : resource.limit;
-            const almostFull = receivingVillage.villageResources.availableResources[resource.type] > limit;
+            const almostFull = receivingVillage.villageResources.availableResources[resource.type] >= limit;
 
             if (almostFull) {
                 console.warn(`${resource.type} in ${receivingVillage.name} is over the limit (${limit}): ${receivingVillage.villageResources.availableResources[resource.type]}`);
@@ -61,9 +61,10 @@ schedule.scheduleJob('*/15 * * * *', () => {
 
             // Calculate the amount to send
             const threshold = resource.threshold < 0 ? sendingVillage.resourceLimit + resource.threshold : resource.threshold;
-            const amount = Math.floor((sendingVillage.villageResources.availableResources[resource.type] - threshold) / 1000) * 1000;
+            const amountAvailable = Math.min(sendingVillage.villageResources.availableResources[resource.type] - threshold, limit - receivingVillage.villageResources.availableResources[resource.type]);
+            const amountToSend = Math.floor(amountAvailable / 1000) * 1000;
 
-            if (amount > 0) {
+            if (amountToSend > 0) {
                 const market = sendingVillage.buildings.find(building => building.name === 'Market');
 
                 if (!market) {
@@ -73,7 +74,7 @@ schedule.scheduleJob('*/15 * * * *', () => {
 
                 // Off we go!
                 await authorizedAxios.post('https://pintandpillage.nl/api/market/transfer', {
-                    amount,
+                    amount: amountToSend,
                     marketId: market.buildingId,
                     resource: resource.type,
                     toVillageId: receivingVillage.villageId,
@@ -81,9 +82,9 @@ schedule.scheduleJob('*/15 * * * *', () => {
                     // Update our local village
                     villages.set(sendingVillage.name, response.data);
 
-                    console.log(`Transferring ${amount} ${resource.type} from ${sendingVillage.name} to ${receivingVillage.name}`);
+                    console.log(`Transferring ${amountToSend} ${resource.type} from ${sendingVillage.name} to ${receivingVillage.name}`);
                 }, error => {
-                    console.error(`Failed transferring ${amount} ${resource.type} from ${sendingVillage.name} to ${receivingVillage.name}: ${error.response.data.error}`);
+                    console.error(`Failed transferring ${amountToSend} ${resource.type} from ${sendingVillage.name} to ${receivingVillage.name}: ${error.response.data.error}`);
                 });
             }
         }
