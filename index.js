@@ -49,25 +49,38 @@ schedule.scheduleJob('*/15 * * * *', () => {
 
             const sendingVillage = villages.get(resource.from);
             const receivingVillage = villages.get(resource.to);
+            const receivingMarket = receivingVillage.buildings.find(building => building.name === 'Market');
+
+            if (!receivingMarket) {
+                console.error(`Village ${resource.to} has no market!`);
+                continue;
+            }
+
+            // Check resources in receiving village
+            const resourcesIncoming = receivingMarket.marketTravels
+                .filter(travel => travel.name === 'OutgoingMarketTravel' && travel.resourceType === resource.type)
+                .reduce((acc, travel) => acc + travel.amount, 0);
+            const resourcesAvailable = receivingVillage.villageResources.availableResources[resource.type];
+            const resourcesTotal = resourcesAvailable + resourcesIncoming;
 
             // Check limit
             const limit = resource.limit < 0 ? receivingVillage.resourceLimit + resource.limit : resource.limit;
-            const almostFull = receivingVillage.villageResources.availableResources[resource.type] >= limit;
+            const almostFull = resourcesTotal >= limit;
 
             if (almostFull) {
-                console.warn(`${resource.type} in ${receivingVillage.name} is over the limit (${limit}): ${receivingVillage.villageResources.availableResources[resource.type]}`);
+                console.warn(`${resource.type} in ${receivingVillage.name} is over the limit (${limit}): ${resourcesAvailable} available + ${resourcesIncoming} incoming`);
                 continue;
             }
 
             // Calculate the amount to send
             const threshold = resource.threshold < 0 ? sendingVillage.resourceLimit + resource.threshold : resource.threshold;
-            const amountAvailable = Math.min(sendingVillage.villageResources.availableResources[resource.type] - threshold, limit - receivingVillage.villageResources.availableResources[resource.type]);
+            const amountAvailable = Math.min(sendingVillage.villageResources.availableResources[resource.type] - threshold, limit - resourcesTotal);
             const amountToSend = Math.floor(amountAvailable / 1000) * 1000;
 
             if (amountToSend > 0) {
-                const market = sendingVillage.buildings.find(building => building.name === 'Market');
+                const sendingMarket = sendingVillage.buildings.find(building => building.name === 'Market');
 
-                if (!market) {
+                if (!sendingMarket) {
                     console.error(`Village ${resource.from} has no market!`);
                     continue;
                 }
@@ -75,12 +88,14 @@ schedule.scheduleJob('*/15 * * * *', () => {
                 // Off we go!
                 await authorizedAxios.post('https://pintandpillage.nl/api/market/transfer', {
                     amount: amountToSend,
-                    marketId: market.buildingId,
+                    marketId: sendingMarket.buildingId,
                     resource: resource.type,
                     toVillageId: receivingVillage.villageId,
-                }).then(response => {
+                }).then(async response => {
                     // Update our local village
                     villages.set(sendingVillage.name, response.data);
+
+                    villages.set(receivingVillage.name, await authorizedAxios.get(`https://pintandpillage.nl/api/village/${receivingVillage.villageId}`).then(response => response.data));
 
                     console.log(`Transferring ${amountToSend} ${resource.type} from ${sendingVillage.name} to ${receivingVillage.name}`);
                 }, error => {
