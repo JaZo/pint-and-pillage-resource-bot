@@ -48,9 +48,14 @@ schedule.scheduleJob('*/15 * * * *', () => {
             }
 
             const sendingVillage = villages.get(resource.from);
+            const sendingMarket = sendingVillage.buildings.find(building => building.name === 'Market');
             const receivingVillage = villages.get(resource.to);
             const receivingMarket = receivingVillage.buildings.find(building => building.name === 'Market');
 
+            if (!sendingMarket) {
+                console.error(`Village ${resource.from} has no market!`);
+                continue;
+            }
             if (!receivingMarket) {
                 console.error(`Village ${resource.to} has no market!`);
                 continue;
@@ -75,16 +80,9 @@ schedule.scheduleJob('*/15 * * * *', () => {
             // Calculate the amount to send
             const threshold = resource.threshold < 0 ? sendingVillage.resourceLimit + resource.threshold : resource.threshold;
             const amountAvailable = Math.min(sendingVillage.villageResources.availableResources[resource.type] - threshold, limit - resourcesTotal);
-            const amountToSend = Math.floor(amountAvailable / 1000) * 1000;
+            const amountToSend = Math.min(Math.floor(amountAvailable / 1000) * 1000, sendingMarket.marketeersAvailable * 1000);
 
             if (amountToSend > 0) {
-                const sendingMarket = sendingVillage.buildings.find(building => building.name === 'Market');
-
-                if (!sendingMarket) {
-                    console.error(`Village ${resource.from} has no market!`);
-                    continue;
-                }
-
                 // Off we go!
                 await authorizedAxios.post('https://pintandpillage.nl/api/market/transfer', {
                     amount: amountToSend,
