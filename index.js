@@ -17,7 +17,7 @@ schedule.scheduleJob('*/15 * * * *', () => {
         const config = yaml.parse(fs.readFileSync('./config.yml', 'utf8'));
 
         // Login
-        const token = await axios.post('https://pintandpillage.nl/api/accounts/login', {
+        const token = await axios.post('https://www.pintandpillage.nl/api/accounts/login', {
             username: config.username,
             password: config.password,
         }).then(response => response.data.token);
@@ -31,8 +31,8 @@ schedule.scheduleJob('*/15 * * * *', () => {
 
         // Fetch all villages
         const villages = (await Promise.all(
-            (await authorizedAxios.get('https://pintandpillage.nl/api/village').then(response => response.data))
-                .map(village => authorizedAxios.get(`https://pintandpillage.nl/api/village/${village.villageId}`).then(response => response.data))
+            (await authorizedAxios.get('https://www.pintandpillage.nl/api/village').then(response => response.data))
+                .map(village => authorizedAxios.get(`https://www.pintandpillage.nl/api/village/${village.villageId}`).then(response => response.data))
         )).reduce((acc, village) => acc.set(village.name, village), new Map());
 
         // Check the resources
@@ -84,7 +84,7 @@ schedule.scheduleJob('*/15 * * * *', () => {
 
             if (amountToSend > 0) {
                 // Off we go!
-                await authorizedAxios.post('https://pintandpillage.nl/api/market/transfer', {
+                await authorizedAxios.post('https://www.pintandpillage.nl/api/market/transfer', {
                     amount: amountToSend,
                     marketId: sendingMarket.buildingId,
                     resource: resource.type,
@@ -93,7 +93,7 @@ schedule.scheduleJob('*/15 * * * *', () => {
                     // Update our local village
                     villages.set(sendingVillage.name, response.data);
 
-                    villages.set(receivingVillage.name, await authorizedAxios.get(`https://pintandpillage.nl/api/village/${receivingVillage.villageId}`).then(response => response.data));
+                    villages.set(receivingVillage.name, await authorizedAxios.get(`https://www.pintandpillage.nl/api/village/${receivingVillage.villageId}`).then(response => response.data));
 
                     console.log(`Transferring ${amountToSend} ${resource.type} from ${sendingVillage.name} to ${receivingVillage.name}`);
                 }, error => {
